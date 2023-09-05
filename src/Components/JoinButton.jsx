@@ -4,7 +4,6 @@ import { Button } from "@mui/material";
 
 export const Join=()=>{
     const {ws} = useContext(RoomContext)
-    console.log("ws", ws)
     const joinRoom=()=>{
         ws.emit("create-room")
     }
