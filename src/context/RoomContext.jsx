@@ -16,6 +16,7 @@ export const RoomProvider =({children})=>{
     const [me, setMe] = useState();
     const [stream, setStream] = useState();
     const [peers, dispatch] = useReducer(PeerReducer,{});
+    const [screen, setScreen] = useState();
 
     const enterRoom = ({roomId})=>{
         navigate(`/room/${roomId}`)
@@ -40,9 +41,14 @@ export const RoomProvider =({children})=>{
         }
         ws.on("room-created",enterRoom);
         ws.on("get-users", getUsers);
-        // ws.on("user-disconnected", peerRemove);
+         ws.on("user-disconnected", peerRemove);
     },[]);
 
+    const ShareScreen =()=>{
+    navigator.mediaDevices.getDisplayMedia({}).then((stream)=>{
+        setStream(stream)
+    })
+    }
     useEffect(()=>{
         if(!me){
             return;
@@ -67,7 +73,7 @@ export const RoomProvider =({children})=>{
     
     console.log("peer",{peers})
 return (
-    <RoomContext.Provider value={{ws ,me, stream, peers}}>
+    <RoomContext.Provider value={{ws ,me, stream, peers , ShareScreen}}>
         {children}
     </RoomContext.Provider>
 )
