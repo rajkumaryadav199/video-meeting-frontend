@@ -4,7 +4,7 @@ import socketIOClient from "socket.io-client";
 import Peer from "peerjs";
 import {v4 as uuid} from "uuid";
 import { PeerReducer } from "./PeerReducer";
-import { AddPeerAction } from "./PeerAcction";
+import { AddPeerAction, RemovePeerAction } from "./PeerAcction";
 const WS = "http://localhost:8080";
 
 export const RoomContext = createContext(null);
@@ -15,12 +15,16 @@ export const RoomProvider =({children})=>{
     const navigate = useNavigate();
     const [me, setMe] = useState();
     const [stream, setStream] = useState();
-    const [peer, dispatch] = useReducer(PeerReducer,{});
+    const [peers, dispatch] = useReducer(PeerReducer,{});
+
     const enterRoom = ({roomId})=>{
         navigate(`/room/${roomId}`)
     }
     const getUsers = ({participants})=>{
         console.log({participants})
+    }
+    const peerRemove =({peerId})=>{
+        dispatch(RemovePeerAction(peerId))
     }
     useEffect(()=>{
         const meId=uuid()
@@ -36,6 +40,7 @@ export const RoomProvider =({children})=>{
         }
         ws.on("room-created",enterRoom);
         ws.on("get-users", getUsers);
+        // ws.on("user-disconnected", peerRemove);
     },[]);
 
     useEffect(()=>{
@@ -47,9 +52,9 @@ export const RoomProvider =({children})=>{
             return;
         }
         ws.on('user-joined',({peerId})=>{
-            const call = me.call(peerId, stream)
+            const call = me.call(peerId, stream);
             call.on("stream", (peerStream)=>{
-                dispatch(AddPeerAction(peerId, peerStream))
+                dispatch(AddPeerAction(peerId, peerStream));
             })
         })
         me.on("call", (call)=>{
@@ -59,10 +64,10 @@ export const RoomProvider =({children})=>{
             })
         })
     },[me, stream])
-
-    console.log("peer",{peer})
+    
+    console.log("peer",{peers})
 return (
-    <RoomContext.Provider value={{ws ,me, stream, peer}}>
+    <RoomContext.Provider value={{ws ,me, stream, peers}}>
         {children}
     </RoomContext.Provider>
 )

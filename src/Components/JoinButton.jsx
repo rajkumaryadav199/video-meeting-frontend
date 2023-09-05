@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { RoomContext } from "../context/RoomContext";
-import { Button } from "@mui/material";
+import { Button } from "react-bootstrap";
 
 export const Join=()=>{
     const {ws} = useContext(RoomContext)
