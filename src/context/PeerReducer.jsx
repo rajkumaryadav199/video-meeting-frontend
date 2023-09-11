@@ -1,6 +1,6 @@
 import { ADD_PEER,REMOVE_PEER } from "./PeerAcction";
 
-const PeerState = {}
+const PeerState = {stream:''}
 
 // const PeerAction = {
 //   peerAdd:{
@@ -31,6 +31,6 @@ export const PeerReducer =(state = PeerState, action)=>{
             stream: undefined,} 
           }
       default : 
-        return state;
+        return {...state};
   }
 }

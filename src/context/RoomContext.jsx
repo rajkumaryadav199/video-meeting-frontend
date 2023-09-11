@@ -16,17 +16,21 @@ export const RoomProvider =({children})=>{
     const [me, setMe] = useState();
     const [stream, setStream] = useState();
     const [peers, dispatch] = useReducer(PeerReducer,{});
-    const [screen, setScreen] = useState();
+    const [screenSharingId, setScreenSharingId] = useState();
+    const [roomId, setRoomId] = useState("");
 
     const enterRoom = ({roomId})=>{
         navigate(`/room/${roomId}`)
     }
+
     const getUsers = ({participants})=>{
-        console.log({participants})
+        console.log("participents",{participants})
     }
+
     const peerRemove =({peerId})=>{
         dispatch(RemovePeerAction(peerId))
     }
+
     useEffect(()=>{
         const meId=uuid()
         const peer=new Peer(meId);
@@ -41,13 +45,61 @@ export const RoomProvider =({children})=>{
         }
         ws.on("room-created",enterRoom);
         ws.on("get-users", getUsers);
-         ws.on("user-disconnected", peerRemove);
+        ws.on("user-disconnected", peerRemove);
+        ws.on("user-started-sharing", (peerId)=>setScreenSharingId(peerId));
+        ws.on("user-stoped-sharing", ()=>setScreenSharingId(''))
+     return()=>{
+        ws.off("room-created");
+        ws.off("get-users");
+        ws.off("user-disconnected");
+        ws.off("user-started-sharing");
+        ws.off("user-stopped-sharing");
+        ws.off("user-joined");
+     };
+
     },[]);
 
+    useEffect(()=>{
+       if(screenSharingId)
+       {
+        ws.emit("start-sharing", {peerId:screenSharingId, roomId})
+       }
+       else{
+        ws.emit("stop-sharing")
+       }
+    },[screenSharingId, roomId])
+
+    const switchScreen =(stream)=>{
+        setStream(stream);
+        setScreenSharingId(me?.id || "");
+
+        Object.values(me?.connections).forEach((connection)=>{
+            const videoTrack = stream?.getTracks().find((track)=>track.kind ==='video');
+            connection[0].peerConnection
+            .getSenders()[1]
+            .replaceTrack(videoTrack)
+            .catch((err)=>{
+                console.log(err)
+            })
+        })
+    }
     const ShareScreen =()=>{
-    navigator.mediaDevices.getDisplayMedia({}).then((stream)=>{
-        setStream(stream)
-    })
+        if(screenSharingId)
+        {
+            navigator.mediaDevices.getUserMedia({video:true, audio:true}).then(switchScreen);
+        }
+        else{
+            navigator.mediaDevices.getDisplayMedia({}).then(switchScreen);
+        }
+        Object.values(me?.connections).forEach((connection)=>{
+            const videoTrack = stream?.getTracks().find((track)=>track.kind ==='video');
+            connection[0].peerConnection
+            .getSenders()[1]
+            .replaceTrack(videoTrack)
+            .catch((err)=>{
+                console.log(err)
+            })
+        })
     }
     useEffect(()=>{
         if(!me){
@@ -57,7 +109,7 @@ export const RoomProvider =({children})=>{
         {
             return;
         }
-        ws.on('user-joined',({peerId})=>{
+        ws.on('user-joined',({ peerId })=>{
             const call = me.call(peerId, stream);
             call.on("stream", (peerStream)=>{
                 dispatch(AddPeerAction(peerId, peerStream));
@@ -70,10 +122,11 @@ export const RoomProvider =({children})=>{
             })
         })
     },[me, stream])
+
     
     console.log("peer",{peers})
 return (
-    <RoomContext.Provider value={{ws ,me, stream, peers , ShareScreen}}>
+    <RoomContext.Provider value={{ws ,me, stream, peers , ShareScreen, screenSharingId ,setRoomId}}>
         {children}
     </RoomContext.Provider>
 )
